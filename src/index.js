@@ -55,10 +55,12 @@ import {
   deepClone,
   merge,
   createNestedObject,
+  reserveProperties,
   KEYS_RANGE_HOOKS,
 } from './utils/helper';
 
 import {
+  isType,
   isObject,
   isArray,
   isFunction,
@@ -98,7 +100,7 @@ function createError(err, noPrefix) {
 
   error.message = `${(noPrefix ? '' : '[modelCheck]')} ${error.message}`;
   // attach detail tag info
-  error.detail = { type: 'model_check_error' };
+  error.detail = { type: 'modelcheck_error' };
 
   throw error;
 }
@@ -337,6 +339,7 @@ export default function modelCheck (payload, model, {
         const nested = createNestedObject([[prop, descriptor.default]]);
         // 深度合并到原有数据上
         merge([data, nested], { keysRange, mergeStrategy: MERGE_STRATEGY.deep });
+
       }
     }
 
@@ -414,13 +417,14 @@ export default function modelCheck (payload, model, {
   
   // 只使用model中定义的key来构造数据结构
   if (onlyModelDesciprtors) {
-    const tData = [];
+    const tProps = [];
     modelProperties.forEach((key) => {
       const realKey = isObject(model[key]) ? (model[key].prop || key) : key;
-      tData.push([realKey, namespace(data, realKey, nameSpaceOpts)]);
+      // const tarData = namespace(data, realKey, nameSpaceOpts);
+      tProps.push(realKey);
     });
-    
-    return createNestedObject(tData);
+
+    return reserveProperties(data, tProps);
   }
 
   return data;

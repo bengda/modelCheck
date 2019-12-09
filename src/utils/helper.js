@@ -795,6 +795,42 @@ export function createNestedObject(descriptors) {
 }
 
 /**
+ * 保留指定的键值
+ * 属性名建议使用数组来描述
+ * @param {object|array} data
+ * @param {propertyKey[]} properties - 键名。如['a', 'b', 'c.d']
+ */
+export function reserveProperties(data, properties) {
+  composeAssert(data, [isArray, isObject]);
+
+  const result = isObject(data) ? {} : [];
+  
+  properties.forEach((prop) => {
+    const keys = isArray(prop) ? prop : prop.split('.');
+    keys.reduce((acc, k1, idx1) => {
+      if (isObject(acc.new) || isArray(acc.new) && (isObject(acc.raw) || isArray(acc.raw))) {
+        if (idx1 === keys.length - 1) {
+          acc.new[k1] = acc.raw[k1];
+        } else {
+          const temp = acc.raw[k1];
+          
+          if (isArray(temp)) {
+            acc.new[k1] = acc.new[k1] || [];
+          } else if (isObject(temp)) {
+            acc.new[k1] = acc.new[k1] || {};
+          } else {
+            acc.new[k1] = acc.raw[k1];
+          }
+        }
+        return { new: acc.new[k1], raw: acc.raw[k1] };
+      }
+      return { new: null, raw: null };
+    }, { new: result, raw: data });
+  });
+  return result;
+}
+
+/**
  * 变换对象的key名。key值支持namespace形式，如果目标key不可配置则无法替换
  * @param {complexValue} root - 目标对象
  * @param {[][]} model - 二维数组。每一项为[k, v]，k表示将要被替换的root中的key（支持使用数组描述），v表示将要替换成的key名

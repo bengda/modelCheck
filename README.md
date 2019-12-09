@@ -3,11 +3,11 @@
 
 
 --------
-## 用法
+<!-- ## 用法
 
 ```js
 npm install modelcheck
-```
+``` -->
 
 ## 示例
 
@@ -170,6 +170,7 @@ export const KEYS_RANGE = {
 
 ## 数据校验
 - type：数据类型校验    
+<b>注意：数据null总是会通过类型验证</b>
 
 ```js
   const data = {
@@ -180,8 +181,17 @@ export const KEYS_RANGE = {
       type: String,
     },
   };
+
+  const data1 = {
+    id: null,
+  };
+
+
   // 校验通过
   modelCheck(data, descriptors);
+
+  // 校验通过
+  modelCheck(data1, descriptors);
 
   const descriptors1 = {
     id: {
@@ -295,8 +305,20 @@ const descriptors = {
   },
 };
 
+const descriptors1 = {
+  name: {
+    type: String,
+    validator(val) {
+      return new Error('请填写姓名');
+    },
+  },
+};
+
 // Error:  请填写姓名
 modelCheck(data, descriptors);
+
+// Error:  请填写姓名
+modelCheck(data, descriptors1);
 ```
 ### 数据修剪
 
@@ -420,3 +442,353 @@ modelCheck(data, descriptors);
   // data中的s2会被舍弃掉
   expect(modelCheck(data, descriptors)).to.deep.equal({ s1: '111' });
 ```
+
+## 对子级数据描述
+我们可以指定model字段来对子级进行描述。<b>对于对象则需要指出需要描述的key，对于数组则不需要</b>。model字段支持使用一个工厂函数返回一个对象，工厂函数接收两个参数，第一个为当前项的值，第二个为数组索引值或对象的key。
+
+- 对象的子级描述
+```js
+  const data = {
+    o: {
+      o1: {
+        o11: {
+          text: 'hello world!',
+        },
+      },
+      o2: {
+        o21: {
+          text: 'wow!!!',
+        },
+      },
+    },
+  };
+  const descriptors = {
+    o: {
+      type: Object,
+      model: {
+        o1: {
+          type: Object,
+          model: {
+            o11: {
+              type: Object,
+              model: {
+                text: {
+                  type: String,
+                  validator(v) {
+                    return v === 'hello world!';
+                  },
+                },
+              },
+            },
+          },
+        },
+        o2: {
+          type: Object,
+          model: {
+            o21: {
+              type: Object,
+              model: {
+                text: String,
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+```
+
+- 数组的子级描述
+  
+```js
+  const data = {
+    o: {
+      o1: [1, {
+        text: 'hello world!',
+      }],
+    },
+  };
+  const descriptors = {
+    o: {
+      type: Object,
+      model: {
+        o1: {
+          type: Array,
+          model(v, idx) {
+            switch (idx) {
+              case 0:
+                return {
+                  type: Number,
+                };
+              case 1: 
+                return {
+                  type: Object,
+                  model: {
+                    text: {
+                      type: String,
+                      validator(v) {
+                        return v === 'hello world!';
+                      },
+                    },
+                  },
+                };
+              default:
+                return {};
+            }
+          },
+        },
+      },
+    },
+  };
+```
+
+## 使用namespace方式简化描述
+<b>不推荐使用，因为这会破坏描述结构的可阅读性。</b>但是某些情况下我们想对深层次下的某个属性描述，一层一层描述下来，未免过于繁琐，这时我们可以使用namspace方式来简化描述，一步到位。
+
+```js
+const nested = {
+  a: {
+    a1: {
+      a11: {
+        a111: 'i am a111',
+      },
+    },
+  },
+};
+
+const descriptors1 = {
+  a: {
+    model: {
+      a1: {
+        model: {
+          a11: {
+            model: {
+              a111: String,
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+expect(modelCheck(nested, descriptors1)).to.deep.equal(nested);
+
+// 使用namespace方式，是不是非常简洁?!
+const descriptors2 = {
+  'a.a1.a11.a111': {
+    validator: (val) => val === 'i am a111',
+  },
+};
+
+expect(modelCheck(nested, descriptors2)).to.deep.equal(nested);
+
+// 也可以使用prop字段重新指定要校验的属性
+const descriptors3 = {
+  notCheck: {
+    prop: 'a.a1.a11.a111',
+    validator: (val) => val === 'i am a111',
+  },
+};
+
+// prop也可以写成数组形式
+const descriptors4 = {
+  notCheck: {
+    prop: ['a', 'a1', 'a11', 'a111'],
+    validator: (val) => val === 'i am a111',
+  },
+};
+
+expect(modelCheck(nested, descriptors3)).to.deep.equal(modelCheck(nested, descriptors4));
+
+// 建议使用prop的数组形式来描述键路径
+// 如果使用字符串如: a.b.c，那么有可能表示的是a.b.c这个属性，或a下的b.c属性或a.b下的c属性或a下的b属性下的c字段。
+// 使用数组我们可以将上述情况精确表示出来，['a.b.c'], ['a', 'b.c'], ['a.b', 'c'], ['a', 'b', 'c']
+
+const nested2 = {
+  'a.b.c': 'a.b.c',
+  a: {
+    b: {
+      c: 'a=>b=>c',
+    },
+    'b.c': 'a=>b.c',
+  },
+  'a.b': {
+    c: 'a.b=>c',
+  },
+};
+
+const descriptors5 = {
+  // 如果我们想要描述a下的b属性下的c字段，有可能我们描述了a.b.c属性名（这跟传入数据中的键定义时间先后有关，这是极其不保险的做法）
+  'a.b.c': {
+    // 同理
+    // prop: 'a.b.c',
+    validator: (val) => val === 'a=>b=>c',
+  },
+};
+
+// Error:  validate property a.b.c failed
+modelCheck(nested2, descriptors5);
+
+// 使用prop数组可以精确描述，可读性也更好
+const descriptors6 = {
+  'a.b.c': {
+    // 我们想要描述a下的b属性下的c字段
+    prop: ['a', 'b', 'c'],
+    validator: (val) => val === 'a=>b=>c',
+  },
+};
+
+// 验证通过，没有错误
+modelCheck(nested2, descriptors6);
+
+// 对于数组同样适用
+
+const oArr = {
+  arr: [
+    1,
+    {
+      foo: {
+        bar: 'have a nice day!',
+      },
+    },
+    'hello world',
+    ['a', 'b'],
+  ],
+};
+
+const oArrDescriptors = {
+  'arr.1.foo.bar': {
+    type: String,
+    validator: (val) => val === 'have a nice day!',
+  },
+  'arr.3.1': {
+    type: String,
+    validator: (val) => val === 'b',
+  },
+};
+
+expect(modelCheck(oArr, oArrDescriptors)).to.deep.equal({
+  arr: [
+    undefined,
+    {
+      foo: {
+        bar: 'have a nice day!',
+      },
+    }, 
+    undefined,
+    [undefined, 'b'],
+  ],
+});
+
+// 属性不存在，也可以使用namespace方式创建
+const oTar = {};
+
+const oTarDescriptors = {
+  'a.b.c': {
+    ifNoPropCreated: true,
+  },
+};
+
+expect(modelCheck(oTar, oTarDescriptors)).to.deep.equal({ a: { b: { c: undefined } } });
+
+
+```
+
+- <b>注意使用namespace不能直接来描述数组，数组是不能直接指定键名的。</b>因为假设数组长度为n，如果对0~n-1每一项都描述一遍显然不合理，所以数组描述是省略键名的，它的实现如下
+```js
+  if (isArray(payload)) {
+    return modelCheck({ 0: payload }, { 0: model }, options)[0];
+  }
+```
+
+例如：
+```js
+  const arr = [1, 2];
+
+  const arrDescriptors = {
+    type: Array,
+    // 与对象不一样，数组不需要指定键名
+    model: Number,
+    // 否则我们就要写成这样了，这显然不合理
+    // model: {
+    //   0: Number,
+    //   1: Number,
+    // },
+  };
+```
+```js
+const arrTar = [1, 2];
+
+const arrTarDescriptors = {
+  1: {
+    ifNoPropCreate: true,
+    replace: '2',
+  },
+  2: {
+    ifNoPropCreate: true,
+    replace: 3,
+  },
+  '3.a.b': {
+    ifNoPropCreate: true,
+  },
+};
+
+// 上述描述并没哟起作用
+expect(modelCheck(arrTar, arrTarDescriptors)).to.deep.equal([1, 2]);
+
+// 但是我们可以改写成这样
+
+const arrTarDescriptors1 = {
+  'foo.1': {
+    ifNoPropCreate: true,
+    replace: '2',
+  },
+  'foo.2': {
+    ifNoPropCreate: true,
+    replace: 3,
+  },
+  'foo.3.a.b': {
+    ifNoPropCreate: true,
+  },
+};
+
+expect(modelCheck({ foo: arrTar }, arrTarDescriptors1).foo).to.deep.equal([undefined, '2', 3, { a: { b: undefined } }]);
+
+// 可能你注意到了，返回值里原本的值变成了undefined，这是因为默认配置onlyModelDesciprtors=true，只使用描述的键值
+// 想要返回未定义的值，我们可以这样
+expect(modelCheck({ foo: arrTar }, arrTarDescriptors1, { onlyModelDesciprtors: false }).foo).to.deep.equal([1, '2', 3, { a: { b: undefined } }]);
+// 或者这样
+const arrTarDescriptors2 = {
+  // 将foo也包含进去
+  foo: Array,
+  'foo.1': {
+    ifNoPropCreate: true,
+    replace: '2',
+  },
+  'foo.2': {
+    ifNoPropCreate: true,
+    replace: 3,
+  },
+  'foo.3.a.b': {
+    ifNoPropCreate: true,
+  },
+};
+expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2', 3, { a: { b: undefined } }]);
+
+```
+
+### 校验流程
+
+ * 1、遍历model的键值对，每个key（可以使用namespace形式，但是不建议，因为这样会破坏整体数据结构描述的观感，让描述不清晰直白）对应于payload对象的属性，value则是对于目标属性值的描述，对于数组来说没有子级属性这一说，则是对每一项描述，所以形式上了省略了key描述。以下流程都是针对key的描述校验
+ * 2、检测ifNoPropCreate，看是否需要创建目标属性，如果为true并且目标属性不存在则创建
+ * 3、检测required,如果为true并且目标属性不存在，抛出错误
+ * 4、设定校验值，如果目标属性值为undefined，使用default默认值
+ * 5、进行validateBeforeReplace数据有效性验证
+ * 6、检测replace，如果存在则将校验值设定为replace数据
+ * 7、进行typeCheck数据类型校验
+ * 8、进行validator数据有效性校验
+ * 9、检测model，递归对子级进行校验。如果父级ifNoPropCreate=true那么子级也会设定ifNoPropCreate=true
+ * 10、完成目标属性赋值
+ * 11、检测函数onlyModelDesciprtors设置，为true则返回只使用model中定义的key构造的数据结构
+ 
