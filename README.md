@@ -2,12 +2,11 @@
 对数据进行校验和修剪
 
 
---------
-<!-- ## 用法
+## 安装
 
 ```js
 npm install modelcheck
-``` -->
+```
 
 ## 示例
 
@@ -122,19 +121,105 @@ npm install modelcheck
 - @param {[MoreOption](#moreoption)} option
 
 ### Model
-字段|类型|默认值|备注|举例
-|--|--|--|--|--|
-prop|string,string[]||重新指定要校验的属性名|{ a: { prop: 'b' } }这时会校验b属性而不是a属性
-type|null,Number,Boolean,String,Object,Array,Symbol,Date,Set,WeakSet,Map,WeakMap,Function|\[\]|对构造函数constructor判断来决定类型是否一致。[]表示不限定类型。多个类型可使用数组，如[Number, String]。注意null被认为属于任何类型|
-required|boolean,function|false|默认false。是否必需，为true缺少参数时抛出异常。可使用一个工厂函数返回布尔值
-default|function,any|undefined|可以用function 返回一个值。当键值为undefined时提供默认值
-ifNoPropCreate|boolean|false|为true，则如果payload中不存在此key则创建，并使用default作为默认值。如果父级指定了ifNoPropCreate，那么子级自动也会设定ifNoPropCreate=true
-replace|function,any||替换原值为此值，如果为function则为函数返回的值，function接受一个被替换前的value参数（此值可能是原本的值，也有可能是取自default的值）
-remove|boolean，(value: any, key: string\|number) => boolean||只针对数组，如果数组某项指定了remove=true，那么此项会被移除
-validateBeforeReplace|function||(value: any, key: string\|number) => boolean\|error.在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。
-validator|function||(value: any, key: string\|number) => boolean\|error.数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。
-message|string,error,function||自定义validate错误信息。注意message只是针对validator和validateBeforeReplace校验失败的情况。 这是对用户输入数据校验，如果是数据类型有误，那是开发者的问题，开发者应该自己解决好
-model|object,function||(value: any, key: string\|number)。对于子级的描述，对于数组来说就是数组每项的描述。只针对对象和数组。对于数组可使用function返回一个对象来动态配置每一项的model
+
+<table style="display:table;width:100%;text-align:center;word-break:break-all;">
+  <colgroup>
+    <col width="220px">
+    <col width="300px">
+    <col width="160px">
+    <col width="300px">
+    <col width="200px">
+  </colgroup>
+  <theader>
+    <tr style="background-color:#eee;">
+      <th>字段</th>
+      <th>类型</th>
+      <th>默认值</th>
+      <th>备注</th>
+      <th>举例</th>
+    </tr>
+  </theader>
+  <tbody>
+    <tr>
+      <td>prop</td>
+      <td>string,string[]</td>
+      <td></td>
+      <td>重新指定要校验的属性名</td>
+      <td>{ a: { prop: 'b' } }这时会校验b属性而不是a属性</td>
+    </tr>
+    <tr>
+      <td>type</td>
+      <td>null,Number,Boolean,String,Object,Array,Symbol,Date,Set,WeakSet,Map,WeakMap,Function</td>
+      <td>[]</td>
+      <td>对构造函数constructor判断来决定类型是否一致。[]表示不限定类型。多个类型可使用数组，如[Number, String]。注意null被认为属于任何类型</td>
+      <td>{ type: String }或{ type: [String, Number] }</td>
+    </tr>
+    <tr>
+      <td>required</td>
+      <td>boolean,() => boolean</td>
+      <td>false</td>
+      <td>是否必需，为true缺少参数时抛出异常。可使用一个工厂函数返回布尔值</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>default</td>
+      <td>any,() => any</td>
+      <td>undefined</td>
+      <td>当键值为undefined时提供默认值</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>ifNoPropCreate</td>
+      <td>boolean</td>
+      <td>false</td>
+      <td>为true，则如果payload中不存在此key则创建，并使用default作为默认值。如果父级指定了ifNoPropCreate，那么子级自动也会设定ifNoPropCreate=true</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>replace</td>
+      <td>any,(value: any, key: string|number) => any</td>
+      <td></td>
+      <td>替换原值为此值，如果为function则为函数返回的值，方法接收一个被替换前的value参数（此值可能是原本的值，也有可能是取自default的值）</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>remove</td>
+      <td>boolean，(value: any, key: string|number) => boolean</td>
+      <td></td>
+      <td>只针对数组，如果数组某项指定了remove=true，那么此项会被移除</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>validateBeforeReplace</td>
+      <td>(value: any, key: string|number) => boolean|error</td>
+      <td></td>
+      <td>在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>validator</td>
+      <td>(value: any, key: string|number) => boolean|error</td>
+      <td></td>
+      <td>数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>message</td>
+      <td>string,error,() => string|error</td>
+      <td></td>
+      <td>自定义validate错误信息。注意message只是针对validator和validateBeforeReplace校验失败的情况。 这是对用户输入数据校验，如果是数据类型有误，那是开发者的问题，开发者应该自己解决好</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>model</td>
+      <td>object,(value: any, key: string|number) => object</td>
+      <td></td>
+      <td>对于子级的描述，对于数组来说就是数组每项的描述。只针对对象和数组。对于数组可使用function返回一个对象来动态配置每一项的model</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
 
 ### MoreOption
 - @param {boolean} [cloneData=true] - 默认:true;是否克隆payload数据
@@ -686,7 +771,7 @@ const oTar = {};
 
 const oTarDescriptors = {
   'a.b.c': {
-    ifNoPropCreated: true,
+    ifNoPropCreate: true,
   },
 };
 
@@ -734,7 +819,7 @@ const arrTarDescriptors = {
   },
 };
 
-// 上述描述并没哟起作用
+// 上述描述并没有起作用
 expect(modelCheck(arrTar, arrTarDescriptors)).to.deep.equal([1, 2]);
 
 // 但是我们可以改写成这样

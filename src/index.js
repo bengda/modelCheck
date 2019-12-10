@@ -3,7 +3,6 @@
  * 具备两个功能：
  * 1、数据校验
  * 2、数据修剪
- * NOTE 注意null被认为是所有数据类型的子类
  * @author huyk<bengda@outlook.com>
  * @version 0.0.1
  * @module modelCheck
@@ -60,7 +59,6 @@ import {
 } from './utils/helper';
 
 import {
-  isType,
   isObject,
   isArray,
   isFunction,
@@ -214,7 +212,6 @@ function validate(validator, { key, value, message }) {
  * @property {function} [validateBeforeReplace] - - (value: any, key: string) => any.在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
  * @property {function} [validator] - (value: any, key: string) => any.数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
  * @property {string|error|function} [message] - 自定义validator和validateBeforeReplace错误信息
- * @property {object[]} [elementFormRule] - element-ui的表单组件的rules校验规则
  */
 
 /**

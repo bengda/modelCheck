@@ -23,7 +23,12 @@
     "chai": "^4.2.0",
     "mocha": "^6.2.2"
   },
-  "dependencies": {
-    "core-js": "^3.4.2"
-  }
+  "keywords": [
+    "model",
+    "payload",
+    "modelCheck",
+    "数据校验",
+    "数据修剪"
+  ],
+  "dependencies": {}
 }
