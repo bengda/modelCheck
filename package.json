@@ -1,0 +1,34 @@
+{
+  "name": "modelcheck",
+  "version": "0.0.1",
+  "description": "根据数据模型描述校验数据和修剪数据",
+  "main": "/dist/index.js",
+  "scripts": {
+    "dev": "babel src -d dist --source-maps",
+    "build": "npx rimraf dist && babel src -d dist",
+    "test": "npx mocha --require @babel/register ./test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bengda/modelCheck.git"
+  },
+  "author": "huyk<bengda@outlook.com>",
+  "license": "",
+  "browserslist": "> 0.25%, not dead",
+  "devDependencies": {
+    "@babel/cli": "^7.7.4",
+    "@babel/core": "^7.7.4",
+    "@babel/preset-env": "^7.7.4",
+    "@babel/register": "^7.7.4",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.2"
+  },
+  "keywords": [
+    "model",
+    "payload",
+    "modelCheck",
+    "数据校验",
+    "数据修剪"
+  ],
+  "dependencies": {}
+}
