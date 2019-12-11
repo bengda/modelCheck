@@ -4,7 +4,7 @@
  * 1、数据校验
  * 2、数据修剪
  * @author huyk<bengda@outlook.com>
- * @version 0.0.1
+ * @version 0.0.2
  * @module modelCheck
  * @example
  * const payload = {
