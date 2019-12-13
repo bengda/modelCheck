@@ -191,21 +191,21 @@ npm install modelcheck
     </tr>
     <tr>
       <td>validateBeforeReplace</td>
-      <td>(value: any, key: string|number) => boolean|error</td>
+      <td>(value: any, key: string|number) => boolean|Error</td>
       <td></td>
       <td>在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。</td>
       <td></td>
     </tr>
     <tr>
       <td>validator</td>
-      <td>(value: any, key: string|number) => boolean|error</td>
+      <td>(value: any, key: string|number) => boolean|Error</td>
       <td></td>
       <td>数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。</td>
       <td></td>
     </tr>
     <tr>
       <td>message</td>
-      <td>string,error,() => string|error</td>
+      <td>string,Error,() => string|Error</td>
       <td></td>
       <td>自定义validate错误信息。注意message只是针对validator和validateBeforeReplace校验失败的情况。 这是对用户输入数据校验，如果是数据类型有误，那是开发者的问题，开发者应该自己解决好</td>
       <td></td>
@@ -315,7 +315,7 @@ export const KEYS_RANGE = {
   modelCheck(data, descriptors);
 ```
 
-- validateBeforeReplace: (value: any, key: string|number) => boolean|error 在执行replace前进行数据验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
+- validateBeforeReplace: (value: any, key: string|number) => boolean|Error 在执行replace前进行数据验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
 
 ```js
   const data = {
@@ -336,7 +336,7 @@ export const KEYS_RANGE = {
   // Error: [modelCheck] validate property id failed
   modelCheck(data, descriptors);
 ```
-- validator：(value: any, key: string|number) => boolean|error 数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
+- validator：(value: any, key: string|number) => boolean|Error 数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
 
 ```js
   const data = {
@@ -373,7 +373,24 @@ export const KEYS_RANGE = {
   modelCheck(data, descriptors2);
 ```
 
-- message: string|error| () => string|error 错误信息  
+我们也可以使用[内置校验器](#校验器)方便地校验用户输入的数据
+```js
+  const data = {
+    area: '-100.23',
+  };
+
+  const des = {
+    area: {
+      message: '面积应该是一个大于0的数字',
+      validator: '@isPositiveNumber',
+    },
+  };
+
+  // Error:  面积应该是一个大于0的数字
+  modelCheck(data, des);
+```
+
+- message: string|Error| () => string|Error 错误信息  
 <b>注意：message只是针对validator校验结果的提示，这是因为validator通常是针对用户输入数据的校验，而type，required等字段校验错误应该是开发者开发过程中就处理好</b>。
 
 ```js
@@ -861,6 +878,148 @@ const arrTarDescriptors2 = {
 };
 expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2', 3, { a: { b: undefined } }]);
 
+```
+### 校验器
+代码内置了一些常用的校验器，可以极大的方便我们对用户输入的数据进行校验
+想要更加强大的功能请使用[validator.js](https://github.com/chriso/validator.js)
+
++ is
+  is方法接收两个参数，第一个是规则或比较值，第二个是需要检测的值
+  对于NaN与NaN判定为true
+  @param {RegExp | any} - 如果是正则表达式则调用test方法，其他值则使用 === 比较，NaN 等于 NaN
+  @returns {boolean}
++ compose
+  组合使用校验器，只接受单参数校验器
+  @param {any} value -value
+  @param {string|string[]} validators - validators中除了compose,is的其他校验器
+  @param {symbol} [op=CONDITION_MARK.or] - and 或者 or
+  @returns {boolean}
++ isEmail
+  检测邮箱地址(如：foo@bar.com)
+  @param {string} value
+  @returns {boolean}
++ isUrl
+  检测url地址(如：http://foo.com)
+  @param {string} value
+  @returns {boolean}
++ isIP
+  是否是ipv4或ipv6地址
+  @param {string} value
+  @returns {boolean}
++ isIPv4
+  是否是ipv4地址
+  @param {string} value
+  @returns {boolean}
++ isIPv6
+  是否是ipv6地址
+  @param {string} value
+  @returns {boolean}
++ isNumeric
+  是否是数字型数据
+  @param {string | number} value
+  @returns {boolean}
++ isInteger(别名isInt)
+  校验整数
+  @param {string | number} value
+  @returns {boolean}
++ isFloat
+  只校验存在小数位的数字，这里非传统意义上的float数据类型
+  如：1.00会通过，1则不是
+  @param {string | number} value 
+  @returns {boolean}
++ isPositiveNumber
+  是否是大于0的数字
+  @param {string | number} value
+  @returns {boolean}
++ isZero
+  是否是等于0的数字
+  @param {string | number} value
+  @returns {number}
++ notNull
+  @param {any} value
+  @returns {boolean}
++ isNull
+  @param {any} value
+  @returns {boolean}
++ notUndefined
+  @param {any} value
+  @returns {boolean}
++ isUndefined
+  @param {any} value
+  @returns {boolean}
++ isNullOrUndefined
+  @param {any} value
+  @returns {boolean}
++ notNullAndUndefined(别名exist)
+  @param {any} value
+  @returns {boolean}
++ notEmpty
+  判断目标的长度为0。对于数组和字符串，它检查length属性，对于对象，它检查可枚举属性的数量
+  @param {string|array|object} value
+  @returns {boolean}
++ isEmpty
+  判断目标的长度为0。对于数组和字符串，它检查length属性，对于对象，它检查可枚举属性的数量
+  @param {string|array|object} value
+  @returns {boolean}
++ isWhiteSpaceCharacters
+  校验是否全是空白字符
+  @param {string} value
+  @returns {boolean}
++ isAlpha
+  校验字母
+  @param {string} value
+  @returns {boolean}
++ isAlphanumeric
+  包含字母和数字
+  @param {string} value
+  @returns {boolean}  
++ isMobilePhone
+  [只校验大陆手机号](https://github.com/chriso/validator.js/blob/master/src/lib/isMobilePhone.js)
+  @param {string} value
+  @returns {boolean}
++ isDate
+  是否是日期格式
+  只校验YYYY-MM-DD 或者YYYY/MM/DD
+  @param {string} value
+  @returns {boolean} 
++ isDateTime
+  是否是日期时间格式
+  只校验YYYY-MM-DD HH:mm:ss 或者YYYY/MM/DD HH:mm:ss
+  @param {string} value
+  @returns {boolean}
++ isLooseDate
+  包含isDate,isDateTime和Date对象(排除null)和${new Date(value: string)} !=== Invalid Date
+  @param {string|Date} value
+  @returns {boolean}
++ isTruthValue
+  是否是真值
+  简单的!!判断
+  @param {any} value
+  @returns {boolean}
++ isFalseValue
+  是否是假值
+  简单的!判断
+  @param {any} value
+  @returns {boolean}
+
+```js
+ // 可以在validateBeforeReplace和validator字段上
+ // 使用@校验器名或者@检验器名($value, $key)字符串格式来指定要使用的校验器
+ // $value和$key为字段value和key的占位符号
+ // 本质上使用Function构造，所以如果想要判断一个小于0的数也可以这样使用 !@isPositiveNumber(@value)
+  const data = {
+    foo: 1,
+  };
+
+  const des = {
+    foo: {
+      replace: '2',
+      validateBeforeReplace: '@isNumeric',
+      validator: '@is("2", $value)',
+    },
+  };
+
+  modelCheck(data, des);
 ```
 
 ### 校验流程

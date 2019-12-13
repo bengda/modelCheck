@@ -4,7 +4,7 @@
  * 1、数据校验
  * 2、数据修剪
  * @author huyk<bengda@outlook.com>
- * @version 0.0.2
+ * @version 0.0.3
  * @module modelCheck
  * @example
  * const payload = {
@@ -63,11 +63,14 @@ import {
   isArray,
   isFunction,
   isUndefined,
+  isString,
 } from './utils/types';
 
 import { composeAssert, assertObject } from './utils/asserts';
 
 import { KEYS_RANGE, MERGE_STRATEGY } from './utils/def';
+
+import Validators from './utils/validators';
 
 /**
  * 只校验下列数据类型
@@ -91,7 +94,7 @@ const allowedTypes = [
 
 /**
  * normalize error
- * @param {error|string} err
+ * @param {Error|string} err
  */
 function createError(err, noPrefix) {
   const error = err instanceof Error ? err : new Error(err);
@@ -174,13 +177,33 @@ function typeCheck(key, value, types) {
 
 /**
  * 数据校验
- * @param {() => boolean|error} validator - 数据校验函数，返回false和Error实例则为数据校验失败
+ * @param {((value: any, key: string|number) => any) | string} validator - 数据校验函数，返回false和Error实例则为数据校验失败
  * @param {string} key
  * @param {any} value
  * @param {string} [message] - 错误提示
  */
 function validate(validator, { key, value, message }) {
-  const validateRes = validator(value, key);
+  let validateRes = false;
+  let $validator;
+  if (isString(validator) && /@\w+/.test(validator)) {
+    /**
+     * @example
+     * {
+     *   validator: '@isInt',
+     *   validateBeforeReplace: '@is(1, $value, $key)',
+     * }
+     * @isInt将会调用Validators.isInt(value)
+     * @is($value, $key)将会调用Validators.is(1, value, key)
+     */
+    $validator = validator.replace(/@/, 'Validators.').replace(/\$value/g, 'value').replace(/\$key/g, 'key');
+
+    const fn = Function('Validators', 'value', 'key', `return ${$validator}`);
+    const exeRes = fn(Validators, value, key);
+
+    validateRes = isFunction(exeRes) ? exeRes(value, key) : exeRes;
+  } else if (isFunction(validator)) {
+    validateRes = validator(value, key)
+  }
 
   // 返回了Error实例或者为false则认为数据验证不通过，抛出错误
   if (validateRes instanceof Error || validateRes === false) {
@@ -211,7 +234,7 @@ function validate(validator, { key, value, message }) {
  * @property {boolean|(value: any, key: string|number) => boolean} [remove] - 只针对数组，如果数组某项指定了remove=true，那么此项会被移除
  * @property {function} [validateBeforeReplace] - - (value: any, key: string) => any.在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
  * @property {function} [validator] - (value: any, key: string) => any.数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
- * @property {string|error|function} [message] - 自定义validator和validateBeforeReplace错误信息
+ * @property {string|Error|function} [message] - 自定义validator和validateBeforeReplace错误信息
  */
 
 /**
@@ -283,7 +306,7 @@ export default function modelCheck (payload, model, {
       // model?: object,
       // validateBeforeReplace?: (value, key) => any
       // validator?: (value, key) => any,
-      // message?: string|error|(() => string|error),
+      // message?: string|Error|(() => string|Error),
       // remove?: boolean|(value, key) => boolean, // only for array model
     };
 
@@ -355,7 +378,7 @@ export default function modelCheck (payload, model, {
     }
 
     // 在replace前验证数据有效性
-    if (isFunction(descriptor.validateBeforeReplace)) {
+    if (isFunction(descriptor.validateBeforeReplace) || isString(descriptor.validateBeforeReplace)) {
       validate(descriptor.validateBeforeReplace, {
         value: valueToCheck,
         key: prop,
@@ -372,7 +395,7 @@ export default function modelCheck (payload, model, {
     typeCheck(prop, valueToCheck, descriptor.type);
 
     // 验证数据有效性
-    if (isFunction(descriptor.validator)) {
+    if (isFunction(descriptor.validator) || isString(descriptor.validator)) {
       validate(descriptor.validator, {
         value: valueToCheck,
         key: prop,
