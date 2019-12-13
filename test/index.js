@@ -659,4 +659,89 @@ describe('#ModelCheck', function () {
     expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2', 3, { a: { b: undefined } }]);
   });
   
+  it('validators', function () {
+
+    const data1 = {
+      foo: 1,
+    };
+
+    const des1 = {
+      foo: {
+        validator: '@is(1, $value)',
+      },
+    };
+
+    modelCheck(data1, des1);
+
+    const data2 = {
+      foo: '-1',
+    };
+
+    const des2 = {
+      foo: {
+        message: '请填写大于0的数字',
+        validator: '@isPositiveNumber',
+      },
+    };
+
+    // Error:  请填写大于0的数字
+    expect(modelCheck.bind(null, data2, des2)).to.throw(Error);
+
+
+    const data3 = {
+      foo: 1,
+    };
+
+    const des3 = {
+      foo: {
+        replace: '2',
+        validateBeforeReplace: '@isNumeric',
+        validator: '@is("2", $value)',
+      },
+    };
+
+    modelCheck(data3, des3);
+
+    const data4 = {
+      area: '-100.23',
+    };
+    
+    const des4 = {
+      area: {
+        message: '面积应该是一个大于0的数字',
+        validator: '@isPositiveNumber',
+      },
+    };
+    
+    // Error:  面积应该是一个大于0的数字
+    expect(modelCheck.bind(null, data4, des4)).to.throw(Error);
+
+    const d1 = '2019-12-13';
+    const d2 = '2019/12/13';
+    const d3 = '2019-12/13';
+    const d4 = '019/12/13';
+
+    modelCheck({ date: d1 }, { date: { validator: '@isDate' } });
+    modelCheck({ date: d2 }, { date: { validator: '@isDate' } });
+
+    expect(modelCheck.bind(null, { date: d3 }, { date: { validator: '@isDate' } })).to.throw(Error);
+    expect(modelCheck.bind(null, { date: d4 }, { date: { validator: '@isDate' } })).to.throw(Error);
+  
+    const t1 = '2019-12-13 16:40:22';
+    const t2 = '2019/12/13 16:40:22';
+    const t3 = '2019-12-13 16:40';
+
+    modelCheck({ date: t1 }, { date: { validator: '@isDateTime' } });
+    modelCheck({ date: t2 }, { date: { validator: '@isDateTime' } });
+
+    expect(modelCheck.bind(null, { date: t3 }, { date: { validator: '@isDateTime' } })).to.throw(Error);
+  
+    const od = new Date();
+    const ods = '2019-12-13T08:52:33.965Z';
+    modelCheck({ date: od }, { date: { validator: '@isLooseDate' } });
+
+    modelCheck({ date: ods }, { date: { validator: '@isLooseDate' } });
+
+    expect(modelCheck.bind(null, { date: 2019 }, { date: { validator: '@isLooseDate' } })).to.throw(Error);
+  });
 });
