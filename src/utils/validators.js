@@ -2,7 +2,7 @@
  * 一些常用的数据验证
  * 想要更加强大的功能请使用validator.js{@link https://github.com/chriso/validator.js}
  * @author huyk<bengda@outlook.com>
- * @version 0.0.1
+ * @version 0.0.2
  * @module Validators
  */
 
@@ -20,7 +20,6 @@ import {
   isDate,
 } from './types';
 
-import { CONDITION_MARK } from './def';
 
 /**
  * @see {@link http://www.regular-expressions.info/email.html}
@@ -124,10 +123,10 @@ const Validators = {
    * 组合使用校验器，只接受单参数校验器
    * @param {*} value -value
    * @param {string|string[]} validators - validators中除了compose,is的其他校验器
-   * @param {symbol} [op=CONDITION_MARK.or] - and 或者 or
+   * @param {string} [op='or'] - and 或者 or
    */
-  compose(value, validators, op = CONDITION_MARK.or) {
-    if (!isString(validators) && !isArray(validators) || ![CONDITION_MARK.and, CONDITION_MARK.or].includes(op)) {
+  compose(value, validators, op = 'or') {
+    if (!isString(validators) && !isArray(validators) || !['and', 'or'].includes(op)) {
       return false;
     }
     let $validators = isString(validators) ? [validators] : validators;
@@ -135,7 +134,7 @@ const Validators = {
     const $includes = Object.keys(Validators).filter(item => Validators[item].length === 1);
     const $excludes = ['compose', 'is'];
     $validators = $validators.filter(item => $includes.includes(item) && !$excludes.includes(item));
-    const $looper = op === CONDITION_MARK.and ? Array.prototype.every : Array.prototype.some;
+    const $looper = op === 'and' ? Array.prototype.every : Array.prototype.some;
     return $looper.call($validators, item => Validators[item](value));
   },
 
@@ -166,7 +165,7 @@ const Validators = {
 
   /**
    * 是否是ipv4地址
-   * @param {string} value - value 
+   * @param {string} value - value
    */
   isIPv4(value) {
     return isIP(value, '4');
@@ -224,7 +223,7 @@ const Validators = {
   },
 
   /**
-   * @param {*} value - value 
+   * @param {*} value - value
    */
   notNull(value) {
     return !Validators.isNull(value);
@@ -236,14 +235,14 @@ const Validators = {
   isNull,
 
   /**
-   * @param {*} value - value 
+   * @param {*} value - value
    */
   notUndefined(value) {
     return !Validators.isUndefined(value);
   },
 
   /**
-   * @param {*} value - value 
+   * @param {*} value - value
    */
   isUndefined,
 
@@ -302,10 +301,10 @@ const Validators = {
 
   /**
    * 包含字母和数字
-   * @param {string} value 
+   * @param {string} value
    */
   isAlphanumeric(value) {
-    return /^[0-9A-z]+$/i.test(value); 
+    return /^[0-9A-z]+$/i.test(value);
   },
 
   /**
@@ -351,7 +350,7 @@ const Validators = {
 
   /**
    * 是否是真值
-   * @param {*} value 
+   * @param {*} value
    */
   isTruthValue(value) {
     return !!value;
@@ -359,7 +358,7 @@ const Validators = {
 
   /**
    * 是否是假值
-   * @param {*} value 
+   * @param {*} value
    */
   isFalseValue(value) {
     return !value;

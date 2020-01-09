@@ -4,7 +4,7 @@
  * 1、数据校验
  * 2、数据修剪
  * @author huyk<bengda@outlook.com>
- * @version 0.0.3
+ * @version 0.0.5
  * @module modelCheck
  * @example
  * const payload = {
@@ -31,7 +31,7 @@
  *        ifNoPropCreate: true,
  *        default: 1,
  *      },
- *    }, 
+ *    },
  *  },
  *  d: {
  *    ifNoPropCreate: true,
@@ -60,6 +60,7 @@ import {
 
 import {
   isObject,
+  isPlainObject,
   isArray,
   isFunction,
   isUndefined,
@@ -96,10 +97,39 @@ const allowedTypes = [
  * normalize error
  * @param {Error|string} err
  */
-function createError(err, noPrefix) {
-  const error = err instanceof Error ? err : new Error(err);
+function createError(err, {
+  // 传入的message字段
+  message,
+  noPrefix = false,
+  // [all|type|required|validateBeforeReplace|validator]
+  field,
+} = {}) {
+  // NOTE 0.0.5新增
+  const messageMap = {
+    all: null,
+    type: null,
+    required: null,
+    validateBeforeReplace: null,
+    validator: null,
+  };
+  if (isPlainObject(message)) {
+    Object.assign(messageMap, message);
+  } else {
+    // 默认为validateBeforeReplace和validator字段的错误提示
+    Object.assign(messageMap, {
+      validateBeforeReplace: message,
+      validator: message,
+    });
+  }
+  let error = err instanceof Error ? err : new Error(err);
+  const messageInfo = messageMap[field] || messageMap.all;
+  if (messageInfo instanceof Error) {
+    error = messageInfo;
+  } else {
+    error.message = messageInfo || error.message;
+  }
 
-  error.message = `${(noPrefix ? '' : '[modelCheck]')} ${error.message}`;
+  error.message = `${(noPrefix || messageInfo) ? '' : '[modelCheck] '}${error.message}`;
   // attach detail tag info
   error.detail = { type: 'modelcheck_error' };
 
@@ -122,7 +152,7 @@ function getType(type) {
  * @param {(function|null)[]} types
  */
 function getTypesName(types) {
-  return types.map((type) => (type === null ? 'null' : getFunctionName(type))).join(',');
+  return types.map((type) => (type === null ? 'null' : (isFunction(type) ? getFunctionName(type) : `${type}`))).join(',');
 }
 
 /**
@@ -132,7 +162,7 @@ function getTypesName(types) {
  * @param {function[]} types
  * @returns {boolean}
  */
-function typeCheck(key, value, types) {
+function typeCheck(key, value, types, { message }) {
   /**
    * 没有设定类型函数，则判定为可以通过类型验证
    */
@@ -142,11 +172,12 @@ function typeCheck(key, value, types) {
 
   /**
    * 只允许指定数据类型集合
+   * NOTE 0.0.5废除，改为非allowedTypes中的构造函数使用instanceof判断
    */
-  if (types.some((typer) => !allowedTypes.includes(typer))) {
-    createError(`[${key} => ${JSON.stringify(value)}] the type field only support ${getTypesName(allowedTypes)}`);
-    return false;
-  }
+  // if (types.some((typer) => !allowedTypes.includes(typer))) {
+  //   createError(`[${key} => ${JSON.stringify(value)}] the type field only support ${getTypesName(allowedTypes)}`);
+  //   return false;
+  // }
 
   /**
    * 允许null是所有数据类型的实例
@@ -161,16 +192,26 @@ function typeCheck(key, value, types) {
       return value === null;
     }
 
+    // 将undefined类型也包含进去
+    // 0.0.5新增
+    if (type === undefined) {
+      return value === undefined;
+    }
+
     try {
-      // 通过构造函数来判断是否是同一种类型
-      return value.constructor === type;
+      if (allowedTypes.includes(type)) {
+        // 通过构造函数来判断是否是同一种类型
+        return value.constructor === type;
+      }
+      // NOTE 0.0.5新增
+      return value instanceof type;
     } catch (error) {
       return false;
     }
   });
 
   if (!typeFlag) {
-    createError(`[${key} => ${JSON.stringify(value)}] Expected ${getTypesName(types)}`);
+    createError(`[${key} => ${JSON.stringify(value)}] Expected ${getTypesName(types)}`, { message, field: 'type' });
   }
   return typeFlag;
 }
@@ -182,7 +223,7 @@ function typeCheck(key, value, types) {
  * @param {any} value
  * @param {string} [message] - 错误提示
  */
-function validate(validator, { key, value, message }) {
+function validate(validator, { key, value, message, field }) {
   let validateRes = false;
   let $validator;
   if (isString(validator) && /@\w+/.test(validator)) {
@@ -207,17 +248,7 @@ function validate(validator, { key, value, message }) {
 
   // 返回了Error实例或者为false则认为数据验证不通过，抛出错误
   if (validateRes instanceof Error || validateRes === false) {
-    // 优先使用message的信息
-    if (message instanceof Error) {
-     createError(message, true);
-    } else {
-      const isErrorIns = validateRes instanceof Error;
-      if (isErrorIns) {
-        validateRes.message = (message || validateRes.message);
-      }
-
-      createError(validateRes || message || `validate property ${key} failed`, true);
-    }
+    createError(validateRes || `validate property ${key} failed`, { message, field, noPrefix: true });
   }
 }
 
@@ -234,8 +265,18 @@ function validate(validator, { key, value, message }) {
  * @property {boolean|(value: any, key: string|number) => boolean} [remove] - 只针对数组，如果数组某项指定了remove=true，那么此项会被移除
  * @property {function} [validateBeforeReplace] - - (value: any, key: string) => any.在执行replace操作前进行数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
  * @property {function} [validator] - (value: any, key: string) => any.数据有效性验证。如果返回Error的实例或者为false则表示数据不通过
- * @property {string|Error|function} [message] - 自定义validator和validateBeforeReplace错误信息
+ * @property {string|Error|MessageParam|() => string|Error|MessageParam } [message] - 自定义错误信息，默认为validator和validateBeforeReplace的错误提示
  */
+
+ /**
+  * 指定message在不同错误下的提示
+  * @typedef {object} MessageParam
+  * @property all - 接管所有错误提示
+  * @property type - 类型错误时的提示
+  * @property required - 缺少字段时的提示
+  * @property validateBeforeReplace - validateBeforeReplace不通过时的提示
+  * @property validator - validator不通过时的提示
+  */
 
 /**
  * 流程
@@ -367,7 +408,7 @@ export default function modelCheck (payload, model, {
 
     // 键名不存在
     if (descriptor.required && !isExistKey) {
-      createError(`property ${prop} is required`);
+      createError(`property ${prop} is required`, { field: 'required', message: descriptor.message });
     }
 
     let valueToCheck = namespace(data, prop, nameSpaceOpts);
@@ -383,6 +424,7 @@ export default function modelCheck (payload, model, {
         value: valueToCheck,
         key: prop,
         message: descriptor.message,
+        field: 'validateBeforeReplace',
       });
     }
 
@@ -392,7 +434,7 @@ export default function modelCheck (payload, model, {
     }
 
     // 开始校验数据类型
-    typeCheck(prop, valueToCheck, descriptor.type);
+    typeCheck(prop, valueToCheck, descriptor.type, { message: descriptor.message });
 
     // 验证数据有效性
     if (isFunction(descriptor.validator) || isString(descriptor.validator)) {
@@ -400,6 +442,7 @@ export default function modelCheck (payload, model, {
         value: valueToCheck,
         key: prop,
         message: descriptor.message,
+        field: 'validator',
       });
     }
 
@@ -427,14 +470,14 @@ export default function modelCheck (payload, model, {
         valueToCheck = modelCheck(valueToCheck, $model, { ...options, ifNoPropCreate: descriptor.ifNoPropCreate });
       }
     }
-    
+
     // 完成属性赋值
     if (hasNamespace(data, prop, nameSpaceOpts)) {
       setNamespaceValue(data, prop, valueToCheck, nameSpaceOpts);
     }
 
   });
-  
+
   // 只使用model中定义的key来构造数据结构
   if (onlyModelDesciprtors) {
     const tProps = [];
