@@ -40,7 +40,7 @@ npm install modelcheck
         c1: {
           default: 1,
         },
-      }, 
+      },
     },
     d: {
       ifNoPropCreate: true,
@@ -94,7 +94,7 @@ npm install modelcheck
       default: 2,
     },
   };
-     
+
   expect(modelCheck(payload, model)).to.deep.equal({
     a:1,
     b: 'breplaced',
@@ -151,7 +151,7 @@ npm install modelcheck
       <td>type</td>
       <td>null,Number,Boolean,String,Object,Array,Symbol,Date,Set,WeakSet,Map,WeakMap,Function</td>
       <td>[]</td>
-      <td>对构造函数constructor判断来决定类型是否一致。[]表示不限定类型。多个类型可使用数组，如[Number, String]。注意null被认为属于任何类型</td>
+      <td>对构造函数constructor判断来决定类型是否一致。[]表示不限定类型。多个类型可使用数组，如[Number, String]。不在上述列表中的构造函数会使用instanceof运算符比较。注意null被认为属于任何类型</td>
       <td>{ type: String }或{ type: [String, Number] }</td>
     </tr>
     <tr>
@@ -205,9 +205,9 @@ npm install modelcheck
     </tr>
     <tr>
       <td>message</td>
-      <td>string,Error,() => string|Error</td>
+      <td>string|Error|MessageParam|() => string|Error|MessageParam</td>
       <td></td>
-      <td>自定义validate错误信息。注意message只是针对validator和validateBeforeReplace校验失败的情况。 这是对用户输入数据校验，如果是数据类型有误，那是开发者的问题，开发者应该自己解决好</td>
+      <td>自定义validate错误信息。注意message默认针对validator和validateBeforeReplace校验失败的情况。 这是对用户输入数据校验，如果是数据类型有误，那是开发者的问题，开发者应该自己解决好</td>
       <td></td>
     </tr>
     <tr>
@@ -254,7 +254,7 @@ export const KEYS_RANGE = {
 ```
 
 ## 数据校验
-- type：数据类型校验    
+- type：数据类型校验
 <b>注意：数据null总是会通过类型验证</b>
 
 ```js
@@ -295,7 +295,7 @@ export const KEYS_RANGE = {
   // 校验通过
   modelCheck(data, descriptors2);
 ```
-- required：字段是否必需，传入的数据没有指定属性时会抛出错误  
+- required：字段是否必需，传入的数据没有指定属性时会抛出错误
 <b>注意：required是校验传入的数据是否存在属性，并不会对属性值是否是真值(truth-value)或是否是空数组校验</b>
 
 ```js
@@ -315,7 +315,7 @@ export const KEYS_RANGE = {
   modelCheck(data, descriptors);
 ```
 
-- validateBeforeReplace: (value: any, key: string|number) => boolean|Error 在执行replace前进行数据验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
+- validateBeforeReplace: (value: any, key: string|number) => boolean|Error 在执行replace前进行数据验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。
 
 ```js
   const data = {
@@ -336,7 +336,7 @@ export const KEYS_RANGE = {
   // Error: [modelCheck] validate property id failed
   modelCheck(data, descriptors);
 ```
-- validator：(value: any, key: string|number) => boolean|Error 数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。  
+- validator：(value: any, key: string|number) => boolean|Error 数据有效性验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。
 
 ```js
   const data = {
@@ -390,8 +390,15 @@ export const KEYS_RANGE = {
   modelCheck(data, des);
 ```
 
-- message: string|Error| () => string|Error 错误信息  
-<b>注意：message只是针对validator校验结果的提示，这是因为validator通常是针对用户输入数据的校验，而type，required等字段校验错误应该是开发者开发过程中就处理好</b>。
+- message: string|Error|MessageParam|() => string|Error|MessageParam 错误信息
+<b>注意：message默认只是针对validator和validateBeforeReplace校验结果的提示，这是因为validator和validateBeforeReplace通常是针对用户输入数据的校验，而type，required等字段校验错误应该是开发者开发过程中就处理好</b>。
+也可以传入一个MessageParam对象来精确提示对应的错误，0.0.4版本加入
+* @typedef {object} MessageParam
+* @property all - 下列错误类型提示缺省值
+* @property type - 类型错误时的提示
+* @property required - 缺少字段时的提示
+* @property validateBeforeReplace - validateBeforeReplace不通过时的提示
+* @property validator - validator不通过时的提示
 
 ```js
 const data = {
@@ -416,15 +423,46 @@ const descriptors1 = {
   },
 };
 
+const descriptors2 = {
+  name: {
+    type: String,
+    message: {
+      validator: '没有填写姓名',
+    },
+    validator(val) {
+      return !!val;
+    },
+  },
+};
+
+const descriptors3 = {
+  a: {
+    type: Number,
+    required: true,
+    message: {
+      all: new Error('没有填写姓名咩'),
+    },
+    validator(val) {
+      return new Error('请填写姓名!');
+    },
+  },
+};
+
 // Error:  请填写姓名
 modelCheck(data, descriptors);
 
 // Error:  请填写姓名
 modelCheck(data, descriptors1);
+
+// Error:  没有填写姓名
+modelCheck(data, descriptors2);
+
+// Error:  没有填写姓名咩
+modelCheck(data, descriptors3);
 ```
 ### 数据修剪
 
-- default：当字段的键值为undefined时则会使用default值，一般配合ifNoPropCreate使用  
+- default：当字段的键值为undefined时则会使用default值，一般配合ifNoPropCreate使用
 
 ```js
   const data = {
@@ -445,7 +483,7 @@ modelCheck(data, descriptors1);
 
 ```
 
-- replace：any | (value: any, key: string | number) => any.替换原值为此值，如果为function则为函数返回的值，function接受一个被替换前的value参数（此值可能是原本的值，也有可能是取自default的值）  
+- replace：any | (value: any, key: string | number) => any.替换原值为此值，如果为function则为函数返回的值，function接受一个被替换前的value参数（此值可能是原本的值，也有可能是取自default的值）
 
 ```js
   const data = {
@@ -467,7 +505,7 @@ modelCheck(data, descriptors1);
 
 ```
 
-- ifNoPropCreate：默认false；当为true，则如果payload中不存在此key则创建，并使用default为默认值 
+- ifNoPropCreate：默认false；当为true，则如果payload中不存在此key则创建，并使用default为默认值
 
 ```js
   const data = {
@@ -492,7 +530,7 @@ modelCheck(data, descriptors1);
       },
     },
   };
-  
+
   const descriptors2 = {
     id: {
       type: String,
@@ -517,7 +555,7 @@ modelCheck(data, descriptors1);
 ```
 
 - remove: boolean | (value: any, key: string | number) => boolean 只针对数组，如果数组某项指定了remove=true，那么此项会被移除
-  
+
 ```js
   const data = [1, 2, 3];
   const descriptors = {
@@ -601,7 +639,7 @@ modelCheck(data, descriptors1);
 ```
 
 - 数组的子级描述
-  
+
 ```js
   const data = {
     o: {
@@ -622,7 +660,7 @@ modelCheck(data, descriptors1);
                 return {
                   type: Number,
                 };
-              case 1: 
+              case 1:
                 return {
                   type: Object,
                   model: {
@@ -777,7 +815,7 @@ expect(modelCheck(oArr, oArrDescriptors)).to.deep.equal({
       foo: {
         bar: 'have a nice day!',
       },
-    }, 
+    },
     undefined,
     [undefined, 'b'],
   ],
@@ -892,7 +930,7 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
   组合使用校验器，只接受单参数校验器
   @param {any} value -value
   @param {string|string[]} validators - validators中除了compose,is的其他校验器
-  @param {symbol} [op=CONDITION_MARK.or] - and 或者 or
+  @param {string} [op=or] - and 或者 or
   @returns {boolean}
 + isEmail
   检测邮箱地址(如：foo@bar.com)
@@ -925,7 +963,7 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
 + isFloat
   只校验存在小数位的数字，这里非传统意义上的float数据类型
   如：1.00会通过，1则不是
-  @param {string | number} value 
+  @param {string | number} value
   @returns {boolean}
 + isPositiveNumber
   是否是大于0的数字
@@ -972,7 +1010,7 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
 + isAlphanumeric
   包含字母和数字
   @param {string} value
-  @returns {boolean}  
+  @returns {boolean}
 + isMobilePhone
   [只校验大陆手机号](https://github.com/chriso/validator.js/blob/master/src/lib/isMobilePhone.js)
   @param {string} value
@@ -981,7 +1019,7 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
   是否是日期格式
   只校验YYYY-MM-DD 或者YYYY/MM/DD
   @param {string} value
-  @returns {boolean} 
+  @returns {boolean}
 + isDateTime
   是否是日期时间格式
   只校验YYYY-MM-DD HH:mm:ss 或者YYYY/MM/DD HH:mm:ss
@@ -1006,7 +1044,7 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
  // 可以在validateBeforeReplace和validator字段上
  // 使用@校验器名或者@检验器名($value, $key)字符串格式来指定要使用的校验器
  // $value和$key为字段value和key的占位符号
- // 本质上使用Function构造，所以如果想要判断一个小于0的数也可以这样使用 !@isPositiveNumber(@value)
+ // 本质上使用Function构造，所以如果想要判断一个小于0的数也可以这样使用 !@isPositiveNumber($value)
   const data = {
     foo: 1,
   };
@@ -1035,4 +1073,3 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
  * 9、检测model，递归对子级进行校验。如果父级ifNoPropCreate=true那么子级也会设定ifNoPropCreate=true
  * 10、完成目标属性赋值
  * 11、检测函数onlyModelDesciprtors设置，为true则返回只使用model中定义的key构造的数据结构
- 

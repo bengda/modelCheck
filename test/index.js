@@ -5,7 +5,7 @@ const modelCheck = require(path.resolve('src/index')).default;
 // const actuator = require('./util').actuator;
 
 describe('#ModelCheck', function () {
-     
+
   it('总体测试', function () {
     const payload = {
       a: 1,
@@ -14,7 +14,7 @@ describe('#ModelCheck', function () {
       arr: ['1', 2, {}],
       arr1: [2, { a: 'a' }, { b: 'c' }],
     };
-  
+
     const model = {
       a: {
         ifNoPropCreate: true,
@@ -33,7 +33,7 @@ describe('#ModelCheck', function () {
           c1: {
             default: 1,
           },
-        }, 
+        },
       },
       d: {
         ifNoPropCreate: true,
@@ -236,8 +236,55 @@ describe('#ModelCheck', function () {
       name: {
         type: String,
         validator(val) {
-          return new Error('请填写姓名');
+          return new Error('请填写姓名!');
         },
+      },
+    };
+
+    const descriptors2 = {
+      name: {
+        type: String,
+        message: {
+          validator: '没有填写姓名',
+        },
+        validator(val) {
+          return !!val;
+        },
+      },
+    };
+
+    const descriptors3 = {
+      a: {
+        type: Number,
+        required: true,
+        message: {
+          all: new Error('没有填写姓名咩'),
+        },
+        validator(val) {
+          return new Error('请填写姓名!');
+        },
+      },
+    };
+
+    const descriptors4 = {
+      name: {
+        type: String,
+        message: {
+          validator: '请填写姓名',
+        },
+        validateBeforeReplace(val) {
+          return !!val;
+        },
+      },
+    };
+
+    function A() {}
+    const descriptors5 = {
+      name: {
+        type: [A],
+        // message: {
+        //   type: 'name类型错误',
+        // },
       },
     };
 
@@ -245,6 +292,15 @@ describe('#ModelCheck', function () {
     expect(modelCheck.bind(null, data, descriptors)).to.throw(Error);
 
     expect(modelCheck.bind(null, data, descriptors1)).to.throw(Error);
+
+    expect(modelCheck.bind(null, data, descriptors2)).to.throw(Error);
+
+    expect(modelCheck.bind(null, data, descriptors3)).to.throw(Error);
+
+    expect(modelCheck.bind(null, data, descriptors4)).to.throw(Error);
+
+    expect(modelCheck.bind(null, data, descriptors5)).to.throw(Error);
+
   });
 
   it('数据修剪:data', function () {
@@ -261,7 +317,7 @@ describe('#ModelCheck', function () {
         required: true,
       },
     };
-  
+
     expect(modelCheck(data, descriptors)).to.deep.equal({ id: '123', name: '张三' });
   });
 
@@ -280,7 +336,7 @@ describe('#ModelCheck', function () {
         replace: '李四',
       },
     };
-    
+
     expect(modelCheck(data, descriptors)).to.deep.equal({ id: '123', name: '李四' });
   });
 
@@ -307,7 +363,7 @@ describe('#ModelCheck', function () {
         },
       },
     };
-    
+
     const descriptors2 = {
       id: {
         type: String,
@@ -429,7 +485,7 @@ describe('#ModelCheck', function () {
                   return {
                     type: Number,
                   };
-                case 1: 
+                case 1:
                   return {
                     type: Object,
                     model: {
@@ -463,7 +519,7 @@ describe('#ModelCheck', function () {
         },
       },
     };
-    
+
     const descriptors1 = {
       a: {
         model: {
@@ -479,18 +535,18 @@ describe('#ModelCheck', function () {
         },
       },
     };
-    
+
     expect(modelCheck(nested, descriptors1)).to.deep.equal(nested);
-    
+
     // 使用namespace方式，**是不是非常简洁**
     const descriptors2 = {
       'a.a1.a11.a111': {
         validator: (val) => val === 'i am a111',
       },
     };
-    
+
     expect(modelCheck(nested, descriptors2)).to.deep.equal(nested);
-    
+
     // 也可以使用prop字段重新制定要校验的属性
     const descriptors3 = {
       notCheck: {
@@ -498,7 +554,7 @@ describe('#ModelCheck', function () {
         validator: (val) => val === 'i am a111',
       },
     };
-    
+
     // prop也可以写成数组形式
     const descriptors4 = {
       notCheck: {
@@ -506,13 +562,13 @@ describe('#ModelCheck', function () {
         validator: (val) => val === 'i am a111',
       },
     };
-    
+
     expect(modelCheck(nested, descriptors3)).to.deep.equal(modelCheck(nested, descriptors4));
-    
+
     // 建议使用prop的数组形式来描述键路径
     // 如果使用字符串如: a.b.c，那么有可能表示的是a.b.c这个属性，或a下的b.c属性或a.b下的c属性或a下的b属性下的c字段。
     // 使用数组我们可以将上述情况精确表示出来，['a.b.c'], ['a', 'b.c'], ['a.b', 'c'], ['a', 'b', 'c']
-    
+
     const nested2 = {
       'a.b.c': 'a.b.c',
       a: {
@@ -525,7 +581,7 @@ describe('#ModelCheck', function () {
         c: 'a.b=>c',
       },
     };
-    
+
     const descriptors5 = {
       // 如果我们想要描述a下的b属性下的c字段，有可能我们描述了a.b.c属性名（这跟传入数据中的键定义时间先后有关，这是极其不保险的做法）
       'a.b.c': {
@@ -534,10 +590,10 @@ describe('#ModelCheck', function () {
         validator: (val) => val === 'a=>b=>c',
       },
     };
-    
+
     // Error:  validate property a.b.c failed
     expect(modelCheck.bind(null, nested2, descriptors5)).to.throw(Error);
-    
+
     // 使用prop数组可以精确描述，可读性也更好
     const descriptors6 = {
       'a.b.c': {
@@ -546,7 +602,7 @@ describe('#ModelCheck', function () {
         validator: (val) => val === 'a=>b=>c',
       },
     };
-    
+
     // 验证通过，没有错误
     modelCheck(nested2, descriptors6);
 
@@ -583,7 +639,7 @@ describe('#ModelCheck', function () {
           foo: {
             bar: 'have a nice day!',
           },
-        }, 
+        },
         undefined,
         [undefined, 'b'],
       ],
@@ -615,7 +671,7 @@ describe('#ModelCheck', function () {
         ifNoPropCreate: true,
       },
     };
-    
+
     // 上述描述并没哟起作用
     expect(modelCheck(arrTar, arrTarDescriptors)).to.deep.equal([1, 2]);
 
@@ -658,7 +714,7 @@ describe('#ModelCheck', function () {
     };
     expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2', 3, { a: { b: undefined } }]);
   });
-  
+
   it('validators', function () {
 
     const data1 = {
@@ -705,14 +761,14 @@ describe('#ModelCheck', function () {
     const data4 = {
       area: '-100.23',
     };
-    
+
     const des4 = {
       area: {
         message: '面积应该是一个大于0的数字',
         validator: '@isPositiveNumber',
       },
     };
-    
+
     // Error:  面积应该是一个大于0的数字
     expect(modelCheck.bind(null, data4, des4)).to.throw(Error);
 
@@ -726,7 +782,7 @@ describe('#ModelCheck', function () {
 
     expect(modelCheck.bind(null, { date: d3 }, { date: { validator: '@isDate' } })).to.throw(Error);
     expect(modelCheck.bind(null, { date: d4 }, { date: { validator: '@isDate' } })).to.throw(Error);
-  
+
     const t1 = '2019-12-13 16:40:22';
     const t2 = '2019/12/13 16:40:22';
     const t3 = '2019-12-13 16:40';
@@ -735,7 +791,7 @@ describe('#ModelCheck', function () {
     modelCheck({ date: t2 }, { date: { validator: '@isDateTime' } });
 
     expect(modelCheck.bind(null, { date: t3 }, { date: { validator: '@isDateTime' } })).to.throw(Error);
-  
+
     const od = new Date();
     const ods = '2019-12-13T08:52:33.965Z';
     modelCheck({ date: od }, { date: { validator: '@isLooseDate' } });

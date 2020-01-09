@@ -117,7 +117,7 @@ function _getKeysFactory(getKeysNativeFunc) {
         [].push.apply(props, ['__proto__', ...getKeysFactory(proto, { containProto: false })]);
       }
     }
-    return props; 
+    return props;
   };
 }
 
@@ -448,7 +448,7 @@ export function kebabCase(str, trimHeadKebab = false) {
 function _merge(target, source, { keysRange = KEYS_RANGE.enumerable, mergeStrategy = MERGE_STRATEGY.shadow }) {
   assertComplex(target);
   assertComplex(source);
-  
+
   const opts = { keysRange, mergeStrategy };
   const sourceKeys = KEYS_RANGE_HOOKS.get(keysRange)(source, { containProto: false });
 
@@ -539,7 +539,7 @@ export function arrayUnique(arr, key) {
  * 对数组做并集
  * arr2的数据合并到arr1
  * NOTE 数据合并行为会对原始arr1造成影响
- * @param {array} arr1 
+ * @param {array} arr1
  * @param {array} arr2
  * @param {propertyKey} [key] - 如果数组的项是对象，key作为每一项的唯一标记
  * @param {symbol} [keysRange=KEYS_RANGE.enumerable] - 遍历键的方式
@@ -573,7 +573,7 @@ export function arrayUnion(arr1, arr2, { key, keysRange = KEYS_RANGE.enumerable,
 /**
  * 对数组做差集
  * arr1 - arr2
- * @param {array} arr1 
+ * @param {array} arr1
  * @param {array} arr2
  * @param {propertyKey} [key] - 如果数组的项是对象，key作为每一项的唯一标记
  * @returns {array} - 返回一个新的数组
@@ -593,7 +593,7 @@ export function arrayDiffer(arr1, arr2, { key } = {}) {
 /**
  * 对数组做交集
  * NOTE 会对原始arr1数据造成影响
- * @param {array} arr1 
+ * @param {array} arr1
  * @param {array} arr2
  * @param {propertyKey} [key] - 如果数组的项是对象，key作为每一项的唯一标记
  * @param {symbol} [keysRange=KEYS_RANGE.enumerable] - 遍历键的方式
@@ -804,7 +804,7 @@ export function reserveProperties(data, properties) {
   composeAssert(data, [isArray, isObject]);
 
   const result = isObject(data) ? {} : [];
-  
+
   properties.forEach((prop) => {
     const keys = isArray(prop) ? prop : prop.split('.');
     keys.reduce((acc, k1, idx1) => {
@@ -813,7 +813,7 @@ export function reserveProperties(data, properties) {
           acc.new[k1] = acc.raw[k1];
         } else {
           const temp = acc.raw[k1];
-          
+
           if (isArray(temp)) {
             acc.new[k1] = acc.new[k1] || [];
           } else if (isObject(temp)) {
@@ -861,7 +861,7 @@ export function transformObjectKeys(root, model, { containProto = false, keysRan
         success = false;
       }
     } else {
-      success = false; 
+      success = false;
     }
   });
 
@@ -1117,7 +1117,7 @@ export function guid(format = 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX', radix = 62
  * @param {string} [children=children] - 子级键名映射
  * @returns {array}
  */
-export function getTreeFullPath(tree, nodeId, { id = 'id', value = 'value', children = 'children' } = {}) {
+export function getTreeFullPath(tree, nodeId, { id, value, children } = {}) {
   assertArray(tree);
   composeAssert(nodeId, [isString, isNumber]);
 
@@ -1162,7 +1162,7 @@ export function getTreeFullPath(tree, nodeId, { id = 'id', value = 'value', chil
  * @param {string} [children=children] - 子级键名映射
  * @returns {object|null}
  */
-export function getTreeNodeDataById(tree, nodeId, { id = 'id', value = 'value', children = 'children' } = {}) {
+export function getTreeNodeDataById(tree, nodeId, { id, value, children } = {}) {
   const treeFullPath = getTreeFullPath(tree, nodeId, { id, value, children });
   const { [treeFullPath.length - 1]: nodeData = null } = treeFullPath;
 
@@ -1234,7 +1234,7 @@ export function flatTreeData(tree, childrenProp) {
  * @typedef {object} SearchTreeInput
  */
 
-/* 
+/*
 d.ts
 interface SearchTreeInput {
   [prop: string]: (arg: any) => boolean,

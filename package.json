@@ -1,6 +1,6 @@
 {
   "name": "modelcheck",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "根据数据模型描述校验数据和修剪数据",
   "main": "/dist/index.js",
   "scripts": {
@@ -27,6 +27,9 @@
     "model",
     "payload",
     "modelCheck",
+    "validate",
+    "validate data",
+    "validator",
     "数据校验",
     "数据修剪"
   ],
