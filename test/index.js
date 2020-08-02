@@ -149,6 +149,7 @@ describe('#ModelCheck', function () {
   it('数据校验:required', function () {
     const data = {
       id: '123',
+      desc: '',
     };
     const descriptors = {
       id: {
@@ -159,8 +160,29 @@ describe('#ModelCheck', function () {
       },
     };
 
+    const descriptors1 = {
+      id: {
+        type: String,
+      },
+      name: {
+        type: String,
+      },
+    };
+
+    const descriptors2 = {
+      desc: {
+        type: String,
+        required: true,
+      },
+    }
+
     // Error: [modelCheck] property name is required
     expect(modelCheck.bind(null, data, descriptors)).to.throw(Error);
+
+    expect(modelCheck.bind(null, data, descriptors1)).not.to.throw(Error);
+
+    //  Error: value of property-desc is required
+    expect(modelCheck.bind(null, data, descriptors2)).to.throw(Error);
   });
 
   it('数据校验:validateBeforeReplace', function () {

@@ -2,7 +2,7 @@
  * 一些常用的数据验证
  * 想要更加强大的功能请使用validator.js{@link https://github.com/chriso/validator.js}
  * @author huyk<bengda@outlook.com>
- * @version 0.0.2
+ * @version 0.0.3
  * @module Validators
  */
 
@@ -364,6 +364,13 @@ const Validators = {
     return !value;
   },
 
+  /**
+   * 是否必要值
+   * @param {*} value
+   */
+  required(value) {
+    return Validators.exist(value) && Validators.notEmpty(value);
+  },
 };
 
 /**

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <!-- umd方式引入 -->
+  <!-- <script src="./dist/index.umd.js"></script> -->
+  <!-- es module方式引入 -->
+  <script type="module">
+    import modelCheck from './dist/index.js';
+    const payload = {
+      a: 1,
+      b: 'b',
+      extra: 's',
+      arr: ['1', 2, {}],
+      arr1: [2, { a: 'a' }, { b: 'c' }],
+    };
+
+    const model = {
+      a: {
+        ifNoPropCreate: true,
+        type: Number,
+        required: true,
+      },
+      b: {
+        type: [Number, String, null],
+        default() { return 'bbb'; },
+        replace(v) { return v + 'replaced'; },
+      },
+      c: {
+        ifNoPropCreate: true,
+        replace: {},
+        model: {
+          c1: {
+            default: 1,
+          },
+        },
+      },
+      d: {
+        ifNoPropCreate: true,
+      },
+      'e.e1': {
+        prop: ['e', 'a', 'e2'],
+        ifNoPropCreate: true,
+        type: Object,
+        default: {},
+        model: {
+          e11: {
+            type: [String, Number],
+            default: 1,
+          },
+          e12: {
+            type: [String, Number, Array],
+            default: [1, 2, 5],
+          },
+        },
+      },
+      'e.a.e2.e12': {
+        replace: [3, 4],
+      },
+      arr: {
+        type: Array,
+        model: {
+          type: [String, Number, Object],
+          remove(val) {
+            return !(typeof val === 'number');
+          },
+        },
+      },
+      arr1: {
+        type: Array,
+      },
+      '对数组更改': {
+        prop: 'arr1.1',
+        type: Object,
+        replace: { hello: 'world' },
+      },
+      'arr1.2.b': {
+        type: Number,
+        replace: 3,
+      },
+      arr2: {
+        ifNoPropCreate: true,
+        default: [],
+      },
+      'arr2.0': {
+        ifNoPropCreate: true,
+        default: 2,
+      },
+    };
+
+    console.log(modelCheck(payload, model));
+  </script>
+</body>
+</html>

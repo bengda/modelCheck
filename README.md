@@ -3,6 +3,7 @@
 
 
 ## 安装
+ // 注意：代码使用了大量es6的api，需要自行提供polyfill
 
 ```js
 npm install modelcheck
@@ -151,14 +152,14 @@ npm install modelcheck
       <td>type</td>
       <td>null,Number,Boolean,String,Object,Array,Symbol,Date,Set,WeakSet,Map,WeakMap,Function</td>
       <td>[]</td>
-      <td>对构造函数constructor判断来决定类型是否一致。[]表示不限定类型。多个类型可使用数组，如[Number, String]。不在上述列表中的构造函数会使用instanceof运算符比较。注意null被认为属于任何类型</td>
+      <td>[]表示不限定类型。多个类型可使用数组，如[Number, String]。不在上述列表中的构造函数会使用instanceof运算符比较。注意null被认为属于任何类型</td>
       <td>{ type: String }或{ type: [String, Number] }</td>
     </tr>
     <tr>
       <td>required</td>
       <td>boolean,() => boolean</td>
       <td>false</td>
-      <td>是否必需，为true缺少参数时抛出异常。可使用一个工厂函数返回布尔值</td>
+      <td>是否必需，为true缺少参数时抛出异常。可使用一个工厂函数返回布尔值。0.0.6版本开始会设置一个默认校验器@required</td>
       <td></td>
     </tr>
     <tr>
@@ -224,19 +225,17 @@ npm install modelcheck
 ### MoreOption
 - @param {boolean} [cloneData=true] - 默认:true;是否克隆payload数据
 - @param {boolean} [onlyModelDesciprtors=true] - 默认:true;指定为true，则只返回model中定义的数据结构
-- @param {symbol} [keysRange=KEYS_RANGE.enumerable] - 遍历键的方式
+- @param {symbol} [keysRange=KEYS_RANGE.keys] - 遍历键的方式
 - @param {boolean} [ifNoPropCreate=false] - 全局指定是否要对不存在的属性进行创建
 
 #### keysRange
 指定遍历键的方式
 
 ```js
-import { KEYS_RANGE } from 'modelcheck/dist/utils/def';
-
 /**
- * 定义遍历键的范围
+ * 遍历键的范围
  */
-export const KEYS_RANGE = {
+ modelCheck.KEYS_RANGE = {
   // 不包含不可枚举属性，不包含symbol
   keys: Symbol('keys'),
   // 包含不可枚举属性，不包含symbol
@@ -297,10 +296,12 @@ export const KEYS_RANGE = {
 ```
 - required：字段是否必需，传入的数据没有指定属性时会抛出错误
 <b>注意：required是校验传入的数据是否存在属性，并不会对属性值是否是真值(truth-value)或是否是空数组校验</b>
+<b>0.0.6版本开始会默认设置一个@required校验器，对于字符串，数组和对象做非空判断，并不允许为null和undefined<b>
 
 ```js
   const data = {
     id: '123',
+    desc: '',
   };
   const descriptors = {
     id: {
@@ -311,8 +312,30 @@ export const KEYS_RANGE = {
     },
   };
 
+  const descriptors1 = {
+    id: {
+      type: String,
+    },
+    name: {
+      type: String,
+    },
+  };
+
+  const descriptors2 = {
+    desc: {
+      type: String,
+      required: true,
+    },
+  }
+
   // Error: [modelCheck] property name is required
   modelCheck(data, descriptors);
+
+  // 通过
+  modelCheck(data, descriptors1);
+
+  //  Error: value of property-desc is required
+  modelCheck(data, descriptors2);
 ```
 
 - validateBeforeReplace: (value: any, key: string|number) => boolean|Error 在执行replace前进行数据验证。如果返回Error的实例或者为false则表示数据不通过。如果指定了message字段则错误信息使用message。
@@ -1039,6 +1062,11 @@ expect(modelCheck({ foo: arrTar }, arrTarDescriptors2).foo).to.deep.equal([1, '2
   简单的!判断
   @param {any} value
   @returns {boolean}
++ required
+  是否是必要值
+  @param {any} value
+  @returns {boolean}
+  其实就是exist(value) && notEmpty(value)
 
 ```js
  // 可以在validateBeforeReplace和validator字段上

@@ -1,11 +1,13 @@
 {
   "name": "modelcheck",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "根据数据模型描述校验数据和修剪数据",
   "main": "/dist/index.js",
   "scripts": {
     "dev": "babel src -d dist --source-maps",
-    "build": "npx rimraf dist && babel src -d dist",
+    "build:esm": "rollup --config --format esm --file dist/index.js",
+    "build:umd": "rollup --config --format umd --file dist/index.umd.js",
+    "build": "npx rimraf dist && npm run build:esm && npm run build:umd",
     "test": "npx mocha --require @babel/register ./test/index.js"
   },
   "repository": {
@@ -16,12 +18,16 @@
   "license": "",
   "browserslist": "> 0.25%, not dead",
   "devDependencies": {
-    "@babel/cli": "^7.7.4",
-    "@babel/core": "^7.7.4",
-    "@babel/preset-env": "^7.7.4",
-    "@babel/register": "^7.7.4",
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.0",
+    "@babel/preset-env": "^7.11.0",
+    "@babel/register": "^7.10.5",
     "chai": "^4.2.0",
-    "mocha": "^6.2.2"
+    "mocha": "^6.2.3",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-cleanup": "^3.1.1",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-terser": "^6.1.0"
   },
   "keywords": [
     "model",

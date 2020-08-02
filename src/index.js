@@ -4,7 +4,7 @@
  * 1、数据校验
  * 2、数据修剪
  * @author huyk<bengda@outlook.com>
- * @version 0.0.5
+ * @version 0.1.0
  * @module modelCheck
  * @example
  * const payload = {
@@ -59,6 +59,7 @@ import {
 } from './utils/helper';
 
 import {
+  isType,
   isObject,
   isPlainObject,
   isArray,
@@ -75,22 +76,22 @@ import Validators from './utils/validators';
 
 /**
  * 只校验下列数据类型
- * 通过构造函数判断
+ * 其它的使用instanceof判断
  */
 const allowedTypes = [
-  null,
-  Number,
-  Boolean,
-  String,
-  Object,
-  Array,
-  Symbol,
-  Date,
-  Set,
-  WeakSet,
-  Map,
-  WeakMap,
-  Function,
+  [null, 'null'],
+  [Number, 'number'],
+  [Boolean, 'boolean'],
+  [String, 'string'],
+  [Object, 'object'],
+  [Array, 'array'],
+  [Symbol, 'symbol'],
+  [Date, 'date'],
+  [Set, 'set'],
+  [WeakSet, 'weakset'],
+  [Map, 'map'],
+  [WeakMap, 'weakmap'],
+  [Function, 'function'],
 ];
 
 /**
@@ -121,17 +122,27 @@ function createError(err, {
       validator: message,
     });
   }
-  let error = err instanceof Error ? err : new Error(err);
-  const messageInfo = messageMap[field] || messageMap.all;
-  if (messageInfo instanceof Error) {
-    error = messageInfo;
-  } else {
-    error.message = messageInfo || error.message;
+
+  let error = err;
+
+  // 其实就是createError传了string
+  if (!(error instanceof Error)) {
+    const messageInfo = messageMap[field] || messageMap.all;
+    if (messageInfo instanceof Error) {
+      error = messageInfo;
+    } else {
+      error = new Error(error);
+      error.message = messageInfo || error.message;
+      error.message = `${(noPrefix || messageInfo) ? '' : '[modelcheck] '}${error.message}`;
+    }
   }
 
-  error.message = `${(noPrefix || messageInfo) ? '' : '[modelCheck] '}${error.message}`;
   // attach detail tag info
-  error.detail = { type: 'modelcheck_error' };
+  if (isObject(error.detail)) {
+    error.detail.type = 'modelcheck_error';
+  } else {
+    error.detail = { type: 'modelcheck_error' };
+  }
 
   throw error;
 }
@@ -180,7 +191,7 @@ function typeCheck(key, value, types, { message }) {
   // }
 
   /**
-   * 允许null是所有数据类型的实例
+   * 允许null是所有数据类型的子例
    */
   if (value === null) {
     return true;
@@ -199,9 +210,9 @@ function typeCheck(key, value, types, { message }) {
     }
 
     try {
-      if (allowedTypes.includes(type)) {
-        // 通过构造函数来判断是否是同一种类型
-        return value.constructor === type;
+      const tarConstructorIdx = allowedTypes.findIndex((entry) => entry[0] === type);
+      if (tarConstructorIdx > -1) {
+        return isType(value) === allowedTypes[tarConstructorIdx][1];
       }
       // NOTE 0.0.5新增
       return value instanceof type;
@@ -248,7 +259,7 @@ function validate(validator, { key, value, message, field }) {
 
   // 返回了Error实例或者为false则认为数据验证不通过，抛出错误
   if (validateRes instanceof Error || validateRes === false) {
-    createError(validateRes || `validate property ${key} failed`, { message, field, noPrefix: true });
+    createError(validateRes || `validate property ${key} failed`, { message, field, noPrefix: validateRes instanceof Error });
   }
 }
 
@@ -300,18 +311,18 @@ function validate(validator, { key, value, message, field }) {
  * @param {...Model} model - 对payload进行检测的数据模型描述
  * @param {boolean} [cloneData=true] - 默认:true;是否克隆payload数据
  * @param {boolean} [onlyModelDesciprtors=true] - 默认:true;指定为true，则只返回model中定义的key值
- * @param {symbol} [keysRange=KEYS_RANGE.enumerable] - 遍历键的方式
+ * @param {symbol} [keysRange=KEYS_RANGE.keys] - 遍历键的方式，默认只遍历可遍历属性
  * @param {boolean} [ifNoPropCreate=false] - 全局指定是否要对不存在的属性进行创建
  * @returns {object}
  */
 export default function modelCheck (payload, model, {
   onlyModelDesciprtors = true,
   cloneData = true,
-  keysRange = KEYS_RANGE.enumerable,
+  keysRange = KEYS_RANGE.keys,
   ifNoPropCreate = false,
 } = {}) {
-  composeAssert(payload, [isObject, isArray], { message: '[modelCheck] payload Expected Object or Array' });
-  assertObject(model, '[modelCheck] model Expected Object');
+  composeAssert(payload, [isObject, isArray], { message: '[modelcheck] payload Expected Object or Array' });
+  assertObject(model, '[modelcheck] model Expected Object');
 
 
   const options = {
@@ -333,7 +344,7 @@ export default function modelCheck (payload, model, {
   const data = cloneData ? deepClone(payload, { keysRange }) : payload;
   const modelProperties = KEYS_RANGE_HOOKS.get(keysRange)(model, { containProto: false });
 
-  modelProperties.forEach((field) => {
+  modelProperties.forEach((field, fieldIndex) => {
     let prop = field;
     const fieldValue = model[field];
 
@@ -383,6 +394,17 @@ export default function modelCheck (payload, model, {
         prop = fieldValue.prop;
       }
 
+      // 0.1.0新增
+      if (descriptor.required) {
+        descriptor.validator = descriptor.validator || '@required';
+        const requiredTip = `value of property-${prop} is required`;
+        if (isPlainObject(descriptor.message)) {
+          descriptor.message.validator = descriptor.message.validator || descriptor.message.required || requiredTip;
+        } else {
+          descriptor.message = descriptor.message || requiredTip;
+        }
+      }
+
     } else {
       // 认为是默认值
       // descriptor.default = isFunction(fieldValue) ? fieldValue() : fieldValue;
@@ -392,19 +414,25 @@ export default function modelCheck (payload, model, {
       descriptor.type = getType(fieldValue);
     }
 
-    // 创建新字段
-    if (descriptor.ifNoPropCreate) {
-      const isExistKey = hasNamespace(data, prop, nameSpaceOpts);
-      if (!isExistKey) {
+    let isExistKey = hasNamespace(data, prop, nameSpaceOpts);
+
+    if (!isExistKey) {
+      // 创建新字段
+      if (descriptor.ifNoPropCreate) {
         // 创建一个对象
         const nested = createNestedObject([[prop, descriptor.default]]);
         // 深度合并到原有数据上
         merge([data, nested], { keysRange, mergeStrategy: MERGE_STRATEGY.deep });
 
+        // 再次查找一下键名是否存在，确保字段是创建成功了
+        isExistKey = hasNamespace(data, prop, nameSpaceOpts);
+      } else if (!descriptor.required) {
+        //@version: 0.1.0 如果数据中没有此字段并且描述required又是false那么就直接不进行校验了，并将描述字段删除
+        modelProperties.splice(fieldIndex, 1);
+        return false;
       }
     }
 
-    const isExistKey = hasNamespace(data, prop, nameSpaceOpts);
 
     // 键名不存在
     if (descriptor.required && !isExistKey) {
@@ -476,6 +504,7 @@ export default function modelCheck (payload, model, {
       setNamespaceValue(data, prop, valueToCheck, nameSpaceOpts);
     }
 
+    return true;
   });
 
   // 只使用model中定义的key来构造数据结构
@@ -492,3 +521,6 @@ export default function modelCheck (payload, model, {
 
   return data;
 }
+
+modelCheck.KEYS_RANGE = KEYS_RANGE;
+
