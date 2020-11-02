@@ -4,6 +4,7 @@
   "description": "根据数据模型描述校验数据和修剪数据",
   "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
+  "types": "types/index.d.ts",
   "scripts": {
     "dev": "babel src -d dist --source-maps",
     "build:umd": "rollup --config --format umd --file dist/index.umd.js --name modelCheck",
