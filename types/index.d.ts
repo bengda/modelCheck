@@ -55,10 +55,10 @@ export const KEYS_RANGE = TypedKeysRangeEnum;
 export const version: string;
 
 declare function modelCheck<T extends object | Array<any>>(payload: T, model: TypedModelCheckModelParam, config?: {
-  onlyModelDesciprtors: boolean = true;
-  cloneData: boolean = true;
-  keysRange: TypedKeysRangeEnum = TypedKeysRangeEnum.keys,
-  ifNoPropCreate: boolean = false;
+  onlyModelDesciprtors?: boolean = true;
+  cloneData?: boolean = true;
+  keysRange?: TypedKeysRangeEnum = TypedKeysRangeEnum.keys,
+  ifNoPropCreate?: boolean = false;
 }): T;
 
 export = modelCheck;
