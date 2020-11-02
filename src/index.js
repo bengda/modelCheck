@@ -4,7 +4,6 @@
  * 1、数据校验
  * 2、数据修剪
  * @author huyk<bengda@outlook.com>
- * @version 0.1.0
  * @module modelCheck
  * @example
  * const payload = {
@@ -73,6 +72,8 @@ import { composeAssert, assertObject } from './utils/asserts';
 import { KEYS_RANGE, MERGE_STRATEGY } from './utils/def';
 
 import Validators from './utils/validators';
+
+import version from '../version';
 
 /**
  * 只校验下列数据类型
@@ -523,4 +524,7 @@ export default function modelCheck (payload, model, {
 }
 
 modelCheck.KEYS_RANGE = KEYS_RANGE;
+
+modelCheck.version = version;
+
 
